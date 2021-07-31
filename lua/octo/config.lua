@@ -11,7 +11,6 @@ M.defaults = {
   timeline_indent = "2";
   right_bubble_delimiter = "";
   left_bubble_delimiter = "";
-  github_hostname = "";
   provider_hostname = "";
   snippet_context_lines = 4;
   file_panel = {
