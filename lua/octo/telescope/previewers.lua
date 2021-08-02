@@ -89,7 +89,6 @@ M.merge_request =
         if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
           local iid = entry.merge_request.iid
           local owner, name = utils.split_repo(opts.repo)
-          print('querying MR ' .. iid)
           local query = glabgraphql("merge_request_query", owner, name, number)
           glab.run(
             {

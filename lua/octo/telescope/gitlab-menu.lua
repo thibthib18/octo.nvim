@@ -140,7 +140,6 @@ function M.merge_requests(opts)
 
   local owner, name = utils.split_repo(opts.repo)
   local query = graphql("merge_requests_query", owner, name, filter, {escape = false})
-  print(query)
   print("Fetching merge requests (this may take a while) ...")
   gh.run(
     {
@@ -148,10 +147,8 @@ function M.merge_requests(opts)
       cb = function(output, stderr)
         print(" ")
         if stderr and not utils.is_blank(stderr) then
-          print("erroring:")
           vim.notify(stderr, 2)
         elseif output then
-          print("aggregate_pages")
           local resp = utils.aggregate_pages(output, "data.project.mergeRequests.nodes")
           local merge_requests = resp.data.project.mergeRequests.nodes
           if #merge_requests == 0 then
@@ -162,7 +159,6 @@ function M.merge_requests(opts)
           for _, merge_request in ipairs(merge_requests) do
             if #tostring(merge_request.iid) > max_number then
               max_number = #tostring(merge_request.iid)
-              print(merge_request.title)
             end
           end
           opts.preview_title = opts.preview_title or ''

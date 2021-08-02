@@ -34,7 +34,6 @@ local function run(opts)
     job:sync()
     local stderr = table.concat(job:stderr_result(), "\n")
     local name = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
-    print('auth as ' .. name)
     if name then
       vim.g.octo_viewer = name
     else
@@ -61,7 +60,6 @@ local function run(opts)
     end
   end
 
-  print('starting glab job')
   local job =
     Job:new(
     {
@@ -71,7 +69,6 @@ local function run(opts)
       on_exit = vim.schedule_wrap(
         function(j_self, _, _)
           if mode == "async" and opts.cb then
-            print('processing results')
             local output = table.concat(j_self:result(), "\n")
             local stderr = table.concat(j_self:stderr_result(), "\n")
             opts.cb(output, stderr)
@@ -82,7 +79,6 @@ local function run(opts)
     }
   )
   if mode == "sync" then
-    print('wait for sync')
     job:sync()
     return table.concat(job:result(), "\n"), table.concat(job:stderr_result(), "\n")
   else
