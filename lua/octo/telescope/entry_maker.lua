@@ -41,6 +41,44 @@ function M.gen_from_issue(max_number)
   end
 end
 
+function M.gen_from_merge_request(max_number)
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.merge_request.iid, "TelescopeResultsNumber"},
+      {entry.merge_request.title}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {width = max_number},
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(merge_request)
+    if not merge_request or vim.tbl_isempty(merge_request) then
+      return nil
+    end
+
+    return {
+      value = merge_request.iid,
+      ordinal = merge_request.iid .. " " .. merge_request.title,
+      display = make_display,
+      merge_request = merge_request
+    }
+  end
+end
+
+
 function M.gen_from_pull_request(max_number)
   local make_display = function(entry)
     if not entry then

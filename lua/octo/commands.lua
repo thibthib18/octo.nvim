@@ -3,6 +3,7 @@ local utils = require"octo.utils"
 local navigation = require"octo.navigation"
 local window = require"octo.window"
 local menu = require"octo.telescope.menu"
+local glabMenu = require"octo.telescope.gitlab-menu"
 local reviews = require"octo.reviews"
 local graphql = require"octo.graphql"
 local constants = require"octo.constants"
@@ -43,6 +44,12 @@ M.commands = {
     url = function()
       M.copy_url()
     end
+  },
+  mr = {
+    list = function(repo, ...)
+      local opts = M.process_varargs(repo, ...)
+      glabMenu.merge_requests(opts)
+    end,
   },
   pr = {
     edit = function(...)

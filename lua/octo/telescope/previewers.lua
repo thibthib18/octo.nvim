@@ -4,6 +4,8 @@ local utils = require "octo.utils"
 local ts_utils = require "telescope.utils"
 local pv_utils = require "telescope.previewers.utils"
 local writers = require "octo.writers"
+local glabgraphql = require "octo.api.gitlab.graphql"
+local glab = require "octo.api.gitlab.glab"
 local graphql = require "octo.graphql"
 local gh = require "octo.gh"
 local defaulter = ts_utils.make_default_callable
@@ -73,6 +75,49 @@ M.gist =
     }
   end
 )
+
+M.merge_request =
+  defaulter(
+  function(opts)
+    return previewers.new_buffer_previewer {
+      title = opts.preview_title,
+      get_buffer_by_name = function(_, entry)
+        return entry.value
+      end,
+      define_preview = function(self, entry)
+        local bufnr = self.state.bufnr
+        if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
+          local iid = entry.merge_request.iid
+          local owner, name = utils.split_repo(opts.repo)
+          print('querying MR ' .. iid)
+          local query = glabgraphql("merge_request_query", owner, name, number)
+          glab.run(
+            {
+              args = {"api", "graphql", "-f", string.format("query=%s", query)},
+              cb = function(output, stderr)
+                if stderr and not utils.is_blank(stderr) then
+                  vim.api.nvim_err_writeln(stderr)
+                elseif output and vim.api.nvim_buf_is_valid(bufnr) then
+                  local result = vim.fn.json_decode(output)
+                  local merge_request = result.data.project.mergeRequest
+                  writers.write_title(bufnr, merge_request.title, 1)
+                  --writers.write_details(bufnr, pull_request)
+                  --writers.write_body(bufnr, pull_request)
+                  --writers.write_state(bufnr, pull_request.state:upper(), number)
+                  --local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
+                  --writers.write_block(bufnr, {"", ""}, reactions_line)
+                  --writers.write_reactions(bufnr, pull_request.reactionGroups, reactions_line)
+                  vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+                end
+              end
+            }
+          )
+        end
+      end
+    }
+  end
+)
+
 
 M.pull_request =
   defaulter(

@@ -530,6 +530,11 @@ function M.get_issue(...)
   vim.cmd(string.format("edit octo://%s/issue/%s", repo, number))
 end
 
+function M.get_merge_request(...)
+  local repo, number = M.get_repo_number_from_varargs(...)
+  vim.cmd(string.format("edit octo://%s/merge/%s", repo, number))
+end
+
 function M.get_pull_request(...)
   local repo, number = M.get_repo_number_from_varargs(...)
   vim.cmd(string.format("edit octo://%s/pull/%s", repo, number))

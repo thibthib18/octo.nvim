@@ -29,6 +29,9 @@ local dropdown_opts = require('telescope.themes').get_dropdown({
   };
 })
 
+-- this returns args to be put in the graphql query as string
+-- opts is a table with the field and value
+-- filter returned is a string of ", field1: value1, field2: value2"
 local function get_filter(opts, kind)
   local filter = ""
   local allowed_values = {}
@@ -282,6 +285,7 @@ function M.pull_requests(opts)
 
   local owner, name = utils.split_repo(opts.repo)
   local query = graphql("pull_requests_query", owner, name, filter, {escape = false})
+  print(query)
   print("Fetching pull requests (this may take a while) ...")
   gh.run(
     {
