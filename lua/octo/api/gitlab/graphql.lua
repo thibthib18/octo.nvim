@@ -9,7 +9,7 @@ query($endCursor: String) {
         iid
         title
         webUrl
-        mergeStatusEnum
+        state
       }
       pageInfo {
         hasNextPage
@@ -23,16 +23,15 @@ query($endCursor: String) {
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
 M.merge_request_query =
   [[
-query($endCursor: String) {
-  project(fullPath: '%s'/'%s'){ -- basically owner/name
-    mergeRequest(iid: %d) {
+query {
+  project(fullPath: "%s/%s"){
+    mergeRequest(iid: "%d") {
       id
-      number
-      state -- unsure
+      iid
+      state
       title
       description
       createdAt
-      closedAt
       updatedAt
       webUrl
       diffStats{
@@ -40,7 +39,6 @@ query($endCursor: String) {
         additions
         deletions
       }
-      mergeStatusEnum
       mergeUser {
         id
       }
