@@ -87,9 +87,9 @@ M.merge_request =
       define_preview = function(self, entry)
         local bufnr = self.state.bufnr
         if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
-          local iid = entry.merge_request.iid
+          local number = entry.merge_request.iid
           local owner, name = utils.split_repo(opts.repo)
-          local query = glabgraphql("merge_request_query", owner, name, iid)
+          local query = glabgraphql("merge_request_query", owner, name, number)
           glab.run(
             {
               args = {"api", "graphql", "-f", string.format("query=%s", query)},
@@ -100,9 +100,9 @@ M.merge_request =
                   local result = vim.fn.json_decode(output)
                   local merge_request = result.data.project.mergeRequest
                   writers.write_title(bufnr, merge_request.title, 1)
-                  --writers.write_details(bufnr, pull_request)
-                  --writers.write_body(bufnr, pull_request)
-                  --writers.write_state(bufnr, pull_request.state:upper(), number)
+                  writers.write_mr_details(bufnr, merge_request)
+                  writers.write_mr_body(bufnr, merge_request)
+                  writers.write_state(bufnr, merge_request.state:upper(), number)
                   --local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
                   --writers.write_block(bufnr, {"", ""}, reactions_line)
                   --writers.write_reactions(bufnr, pull_request.reactionGroups, reactions_line)
