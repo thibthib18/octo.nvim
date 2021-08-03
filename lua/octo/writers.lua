@@ -210,6 +210,27 @@ function M.write_state(bufnr, state, number)
   vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
 
+function M.write_mr_body(bufnr, mr, line)
+  local body = vim.fn.trim(mr.description)
+  if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
+    body = " "
+  end
+  local description = body:gsub("\r\n", "\n")
+  local lines = vim.split(description, "\n", true)
+  vim.list_extend(lines, {""})
+  local desc_mark = M.write_block(bufnr, lines, line, true)
+  local buffer = octo_buffers[bufnr]
+  if buffer then
+    buffer.bodyMetadata = BodyMetadata:new({
+      savedBody = description,
+      body = description,
+      dirty = false,
+      extmark = desc_mark,
+      viewerCanUpdate = issue.userPermissions.updateMergeRequest
+    })
+  end
+end
+
 function M.write_body(bufnr, issue, line)
   local body = vim.fn.trim(issue.body)
   if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
