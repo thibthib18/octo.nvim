@@ -123,6 +123,15 @@ local function copy_url(kind)
   end
 end
 
+local function checkout_merge_request()
+  return function(prompt_bufnr)
+    local selection = action_state.get_selected_entry(prompt_bufnr)
+    actions.close(prompt_bufnr)
+    local sourceBranch = selection.merge_request.sourceBranch
+    utils.checkout_pr(sourceBranch)
+  end
+end
+
 function M.merge_requests(opts)
   opts = opts or {}
   if not opts.states then
@@ -177,7 +186,7 @@ function M.merge_requests(opts)
                 action_set.select:replace(function(prompt_bufnr, type)
                   open(opts.repo, "merge_request", type)(prompt_bufnr)
                 end)
-                --map("i", "<c-o>", checkout_pull_request())
+                map("i", "<c-o>", checkout_merge_request())
                 --map("i", "<c-b>", open_in_browser("pr", opts.repo))
                 --map("i", "<c-y>", copy_url("pull_request"))
                 return true
