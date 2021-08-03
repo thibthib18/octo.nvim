@@ -30,10 +30,27 @@ query {
       iid
       state
       title
+      commitCount
       description
       createdAt
       updatedAt
+      diffStatsSummary {
+        additions
+        deletions
+        changes
+        fileCount
+      }
       webUrl
+      assignees(first: 10){
+        nodes {
+          id
+          name
+          username
+        }
+      }
+      userPermissions {
+        updateMergeRequest
+      }
       diffStats{
         path
         additions
@@ -51,6 +68,24 @@ query {
 
       author {
         id
+        name
+        username
+      }
+      labels{
+        nodes {
+          title
+          color
+        }
+      }
+      reviewers(first:10){
+        nodes {
+          name
+          mergeRequestInteraction {
+            reviewState
+          }
+        }
+      }
+      mergeUser {
         name
       }
     }
