@@ -49,7 +49,7 @@ M.resolve_review_thread_mutation =
         path
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes {
               id
               path
               diffSide
@@ -111,7 +111,7 @@ M.unresolve_review_thread_mutation =
         path
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes {
               id
               path
               diffSide
@@ -170,7 +170,7 @@ M.start_review_mutation =
         state
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes {
               id
               path
               line
@@ -268,8 +268,8 @@ M.submit_pull_request_review_mutation =
 
 M.delete_pull_request_review_mutation =
 [[
-mutation { 
-  deletePullRequestReview(input: {pullRequestReviewId: "%s"}) { 
+mutation {
+  deletePullRequestReview(input: {pullRequestReviewId: "%s"}) {
     pullRequestReview {
       id
       state
@@ -281,8 +281,8 @@ mutation {
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_thread_mutation =
 [[
-mutation { 
-  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", side: %s, line:%d}) { 
+mutation {
+  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", side: %s, line:%d}) {
     thread {
       id
       comments(last:100) {
@@ -312,11 +312,11 @@ mutation {
               totalCount
             }
           }
-        } 
+        }
       }
       pullRequest {
         reviewThreads(last:100) {
-          nodes {	
+          nodes {
             id
             path
             diffSide
@@ -368,8 +368,8 @@ mutation {
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_multiline_thread_mutation =
 [[
-mutation { 
-  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", startSide: %s, side: %s, startLine: %d, line:%d}) { 
+mutation {
+  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", startSide: %s, side: %s, startLine: %d, line:%d}) {
     thread {
       id
       comments(last:100) {
@@ -399,11 +399,11 @@ mutation {
               totalCount
             }
           }
-        } 
+        }
       }
       pullRequest {
         reviewThreads(last:100) {
-          nodes {	
+          nodes {
             id
             path
             diffSide
@@ -490,7 +490,7 @@ M.update_pull_request_review_comment_mutation =
         body
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes {
               id
               path
               diffSide
@@ -563,7 +563,7 @@ M.add_pull_request_review_comment_mutation =
         body
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes {
               id
               path
               diffSide
@@ -644,7 +644,7 @@ M.delete_pull_request_review_comment_mutation =
         pullRequest {
           id
           reviewThreads(last:100) {
-            nodes {	
+            nodes {
               id
               path
               diffSide
@@ -1034,8 +1034,8 @@ M.update_pull_request_state_mutation =
         files(first:100) {
           nodes {
             path
-            viewerViewedState 
-          } 
+            viewerViewedState
+          }
         }
         merged
         mergedBy {
@@ -1156,7 +1156,7 @@ M.update_pull_request_state_mutation =
                     login
                   }
                 }
-              }          
+              }
             }
             ... on MergedEvent {
               createdAt
@@ -1303,7 +1303,7 @@ M.update_pull_request_state_mutation =
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query =
 [[
-query { 
+query {
   repository(owner:"%s", name:"%s") {
     pullRequest (number: %d){
       reviews(first:100, states:PENDING) {
@@ -1313,7 +1313,7 @@ query {
         }
       }
       reviewThreads(last:100) {
-        nodes {	
+        nodes {
           id
           path
           diffSide
@@ -1441,8 +1441,8 @@ query($endCursor: String) {
       files(first:100) {
         nodes {
           path
-          viewerViewedState 
-        } 
+          viewerViewedState
+        }
       }
       merged
       mergedBy {
@@ -1556,7 +1556,7 @@ query($endCursor: String) {
                   login
                 }
               }
-            }          
+            }
           }
           ... on MergedEvent {
             createdAt
@@ -1910,7 +1910,7 @@ query($endCursor: String) {
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query =
   [[
-query { 
+query {
   repository(owner: "%s", name: "%s") {
     issueOrPullRequest(number: %d) {
       __typename
@@ -1922,7 +1922,7 @@ query {
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_summary_query =
   [[
-query { 
+query {
   repository(owner: "%s", name: "%s") {
     issueOrPullRequest(number: %d) {
       ... on PullRequest {
@@ -2598,6 +2598,9 @@ local function escape_chars(string)
 end
 
 return function(query, ...)
+  print('getting query')
+  print(debug.traceback())
+  print(debug.getinfo(2).name)
   local opts = { escape = true }
   for _, v in ipairs{...} do
     if type(v) == "table" then
