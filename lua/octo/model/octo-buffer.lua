@@ -33,7 +33,7 @@ function OctoBuffer:new(opts)
     bufnr = opts.bufnr or vim.api.nvim_get_current_buf(),
     number = opts.number,
     repo = opts.repo,
-    node = opts.node,
+    node = opts.node, -- node is the table return by the gql mr/pr query (mr/pr field)
     titleMetadata = TitleMetadata:new(),
     bodyMetadata = BodyMetadata:new(),
     commentsMetadata = opts.commentsMetadata or {},
@@ -43,13 +43,15 @@ function OctoBuffer:new(opts)
     this.owner, this.name = utils.split_repo(this.repo)
   end
   if this.node and this.node.commits then
-    this.kind = "pull"
+    this.kind = constants.Kind.PULL_REQUEST
     this.taggable_users = {this.node.author.login}
+  elseif this.node and this.iid then
+    this.kind = constants.Kind.MERGE_REQUEST
+    this.taggable_users = {this.node.author.username}
   elseif this.node and this.number then
-    this.kind = "issue"
-    this.taggable_users = {this.node.author.login}
+    this.kind = constants.Kind.ISSUE    this.taggable_users = {this.node.author.login}
   elseif this.node and not this.number then
-    this.kind = "repo"
+    this.kind = constants.Kind.REPO
   else
     this.kind = "reviewthread"
   end
@@ -63,12 +65,9 @@ M.OctoBuffer = OctoBuffer
 function OctoBuffer:apply_mappings()
   local mapping_opts = {silent = true, noremap = true}
   local conf = config.get_config()
+  local key = constants.get_key(self.kind)
 
-  local kind = self.kind
-  if self.kind == "pull" then kind = "pull_request"
-  elseif self.kind == "reviewthread" then kind = "review_thread" end
-
-  for rhs, lhs in pairs(conf.mappings[kind]) do
+  for rhs, lhs in pairs(conf.mappings[key]) do -- TODO: add mr mappings
     vim.api.nvim_buf_set_keymap(self.bufnr, "n", lhs, mappings.callback(rhs), mapping_opts)
   end
 
@@ -105,25 +104,32 @@ function OctoBuffer:render_issue()
   writers.write_title(self.bufnr, self.node.title, 1)
 
   -- write details in buffer
-  writers.write_details(self.bufnr, self.node)
+  -- write body
+  if self.kind == constants.Kind.MERGE_REQUEST then
+    writers.write_mr_details(self.bufnr, self.node)
+    writers.write_mr_body(self.bufnr, self.node)
+  else
+    writers.write_details(self.bufnr, self.node)
+    writers.write_body(self.bufnr, self.node)
+  end
+
 
   -- write issue/pr status
   writers.write_state(self.bufnr, self.node.state:upper(), self.number)
 
-  -- write body
-  writers.write_body(self.bufnr, self.node)
 
   -- write body reactions
-  local reaction_line
-  if utils.count_reactions(self.node.reactionGroups) > 0 then
-    local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
-    writers.write_block(self.bufnr, {"", ""}, line)
-    reaction_line = writers.write_reactions(self.bufnr, self.node.reactionGroups, line)
-  end
-  self.bodyMetadata.reactionGroups = self.node.reactionGroups
-  self.bodyMetadata.reactionLine = reaction_line
+  --local reaction_line
+  --if utils.count_reactions(self.node.reactionGroups) > 0 then
+    --local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
+    --writers.write_block(self.bufnr, {"", ""}, line)
+    --reaction_line = writers.write_reactions(self.bufnr, self.node.reactionGroups, line)
+  --end
+  --self.bodyMetadata.reactionGroups = self.node.reactionGroups
+  --self.bodyMetadata.reactionLine = reaction_line
 
   -- write timeline items
+  -- WIP
   local unrendered_labeled_events = {}
   local unrendered_unlabeled_events = {}
   local prev_is_event = false
