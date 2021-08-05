@@ -24,4 +24,23 @@ M.URL_ISSUE_PATTERN = ("[htps]+://[^/]+/([^/]+/[^/]+)/([pulisue]+)/(%d+)")
 
 M.USER_PATTERN = "@([%w-]+)"
 
+M.Keys = {
+  pull = "pull_request",
+  merge = "merge_request",
+  repo = "repo",
+  issue = "issue",
+  reviewthread = "review_thread",
+}
+
+M.Kind = {
+  PULL_REQUEST = "pull",
+  MERGE_REQUEST = "merge",
+  REPO = "repo",
+  ISSUE = "issue",
+  REVIEW_THREAD = "reviewthread",
+}
+
+M.get_key = function(kind)
+  return M.Keys[kind]
+
 return M
