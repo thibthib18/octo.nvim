@@ -1,5 +1,6 @@
 local OctoBuffer = require'octo.model.octo-buffer'.OctoBuffer
 local gh = require "octo.gh"
+local glab = require "octo.api.gitlab.glab"
 local signs = require "octo.signs"
 local constants = require "octo.constants"
 local config = require "octo.config"
@@ -51,7 +52,8 @@ function M.load_buffer(bufnr)
     repo = string.match(bufname, "octo://(.+)/repo")
     if repo then kind = "repo" end
   end
-  if (kind == "issue" or kind == "pull") and not repo and not number then
+  -- check for errors in the bufname extracted kind and repo
+  if (kind == "issue" or kind == "pull" or kind == "merge") and not repo and not number then
     vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   elseif kind == "repo" and not repo then
@@ -65,17 +67,22 @@ end
 
 function M.load(repo, kind, number, cb)
   local owner, name = utils.split_repo(repo)
+  local api = gh
   local query, key
   if kind == "pull" then
     query = graphql("pull_request_query", owner, name, number)
     key = "pullRequest"
+  elseif kind == "merge" then
+    query = graphql("merge_request_query", owner, name, number)
+    key = "mergeRequest"
+    api = glab
   elseif kind == "issue" then
     query = graphql("issue_query", owner, name, number)
     key = "issue"
   elseif kind == "repo" then
     query = graphql("repo_query", owner, name)
   end
-  gh.run(
+  api.run(
     {
       args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
@@ -85,6 +92,10 @@ function M.load(repo, kind, number, cb)
           if kind == "pull" or kind == "issue" then
             local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
             local obj = resp.data.repository[key]
+            cb(obj)
+          elseif kind == "merge" then
+            local resp = utils.aggregate_pages(output, string.format("data.project.%s.discussions.nodes", key))
+            local obj = resp.data.project[key]
             cb(obj)
           elseif kind == "repo" then
             local resp = vim.fn.json_decode(output)
@@ -231,8 +242,13 @@ function M.create_buffer(kind, obj, repo, create)
   })
 
   octo_buffer:configure()
-  if kind == "repo" then
+  if kind == constants.Kind.REPO then
     octo_buffer:render_repo()
+  elseif kind == constants.Kind.MERGE_REQUEST then
+  -- CURRENT WIP
+    octo_buffer:render_issue()
+    octo_buffer:async_fetch_taggable_users()
+    octo_buffer:async_fetch_issues()
   else
     octo_buffer:render_issue()
     octo_buffer:async_fetch_taggable_users()
