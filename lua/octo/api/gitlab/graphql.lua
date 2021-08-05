@@ -34,6 +34,19 @@ query {
       description
       createdAt
       updatedAt
+      discussions(first: 100, after: $endCursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          author {
+            name
+          }
+          body
+          system
+        }
+      }
       diffStatsSummary {
         additions
         deletions
