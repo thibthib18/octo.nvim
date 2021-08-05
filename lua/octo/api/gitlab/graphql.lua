@@ -40,11 +40,19 @@ query {
           endCursor
         }
         nodes {
-          author {
-            name
+          id
+          resolved
+          notes {
+            nodes {
+              author {
+                name
+              }
+              body
+              system
+              systemNoteIconName
+              position
+            }
           }
-          body
-          system
         }
       }
       diffStatsSummary {
