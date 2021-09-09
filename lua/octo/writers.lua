@@ -669,6 +669,126 @@ function M.write_details(bufnr, issue, update)
   end
 end
 
+function M.write_mr_note(bufnr, note, kind, line)
+
+  -- possible kinds:
+  ---- IssueComment
+  ---- PullRequestReview
+  ---- PullRequestReviewComment
+
+  local buffer = octo_buffers[bufnr]
+  local conf = config.get_config()
+
+  -- heading
+  line = line or vim.api.nvim_buf_line_count(bufnr) + 1
+  local start_line = line
+  M.write_block(bufnr, {"", ""}, line)
+
+  local header_vt = {}
+  -- local author_bubble = bubbles.make_user_bubble(
+  --   comment.author.login,
+  --   comment.viewerDidAuthor,
+  --   { margin_width = 1 }
+  -- )
+
+  if kind == "PullRequestReview" then
+    -- Review top-level comments
+    local state_bubble = bubbles.make_bubble(
+      utils.state_msg_map[comment.state],
+      utils.state_hl_map[comment.state]
+    )
+    table.insert(header_vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+    table.insert(header_vt, {"REVIEW: ", "OctoTimelineItemHeading"})
+    --vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser"})
+    vim.list_extend(header_vt, state_bubble)
+    table.insert(header_vt, {" "..utils.format_date(comment.createdAt), "OctoDate"})
+    if not comment.viewerCanUpdate then table.insert(header_vt, {" ", "OctoRed"}) end
+  elseif kind == "PullRequestReviewComment" then
+    -- Review thread comments
+    local state_bubble = bubbles.make_bubble(
+      comment.state:lower(),
+      utils.state_hl_map[comment.state],
+      { margin_width = 1 }
+    )
+    table.insert(header_vt, {string.rep(" ", 2*conf.timeline_indent)..conf.timeline_marker.." ", "OctoTimelineMarker"})
+    table.insert(header_vt, {"THREAD COMMENT: ", "OctoTimelineItemHeading"})
+    --vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser"})
+    if comment.state ~= "SUBMITTED" then
+      vim.list_extend(header_vt, state_bubble)
+    end
+    table.insert(header_vt, {" "..utils.format_date(comment.createdAt), "OctoDate"})
+    if not comment.viewerCanUpdate then table.insert(header_vt, {" ", "OctoRed"}) end
+  elseif kind == "IssueComment" then
+    -- Issue comments
+    table.insert(header_vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+    table.insert(header_vt, {"COMMENT: ", "OctoTimelineItemHeading"})
+    --vim.list_extend(header_vt, author_bubble)
+    if comment.author ~= vim.NIL then
+      table.insert(header_vt, {comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser"})
+    end
+    table.insert(header_vt, {" "..utils.format_date(comment.createdAt), "OctoDate"})
+    if not comment.viewerCanUpdate then table.insert(header_vt, {" ", "OctoRed"}) end
+  end
+  local comment_vt_ns = vim.api.nvim_create_namespace("")
+  M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
+
+  if kind == "PullRequestReview" and utils.is_blank(comment.body) then
+    -- do not render empty review comments
+    return start_line, start_line+1
+  end
+
+  -- body
+  line = line + 2
+  local comment_body = vim.fn.trim(string.gsub(comment.body, "\r\n", "\n"))
+  if vim.startswith(comment_body, constants.NO_BODY_MSG) or utils.is_blank(comment_body) then
+    comment_body = " "
+  end
+  local content = vim.split(comment_body, "\n", true)
+  vim.list_extend(content, {""})
+  local comment_mark = M.write_block(bufnr, content, line, true)
+
+  line = line + #content
+
+  -- reactions
+  local reaction_line
+  if utils.count_reactions(comment.reactionGroups) > 0 then
+    M.write_block(bufnr, {"", ""}, line)
+    reaction_line = M.write_reactions(bufnr, comment.reactionGroups, line)
+    line = line + 2
+  end
+
+  -- update metadata
+  local comments_metadata = buffer.commentsMetadata
+  table.insert(
+    comments_metadata,
+    {
+      author = comment.author ~= vim.NIL and comment.author.name or "",
+      id = comment.id,
+      dirty = false,
+      savedBody = comment_body,
+      body = comment_body,
+      extmark = comment_mark,
+      namespace = comment_vt_ns,
+      reactionLine = reaction_line,
+      viewerCanUpdate = comment.viewerCanUpdate,
+      viewerCanDelete = comment.viewerCanDelete,
+      viewerDidAuthor = comment.viewerDidAuthor,
+      reactionGroups = comment.reactionGroups,
+      kind = kind,
+      replyTo = comment.replyTo,
+      reviewId = comment.pullRequestReview and comment.pullRequestReview.id,
+      path = comment.path,
+      diffSide = comment.diffSide,
+      snippetStartLine = comment.start_line,
+      snippetEndLine = comment.end_line
+    }
+  )
+
+  return start_line, line - 1
+end
+
 function M.write_comment(bufnr, comment, kind, line)
 
   -- possible kinds:
@@ -1558,6 +1678,115 @@ function M.write_virtual_text(bufnr, ns, line, chunks, mode)
   --if not ok then
     --print(vim.inspect(chunks))
   --end
+end
+
+function M.write_mr_discussions(bufnr, node)
+  local prev_is_system = false
+  -- Gitlab handles events differently than Github
+  -- the timelineItems equivalent are discussions
+  -- discussions contain an array of Notes, which contains the comment and extra info
+  --
+  -- a Note is either a system note or a user comment
+  --
+  -- user comment can be on a part of the diff, in which case the note contains
+  -- a position, this position has x, y, filePath, and a ref to the Diff
+  --
+  -- usually system notes with be a discussion with a single note
+  -- system note types are differentiated by the systemNoteIconName, this  can be:
+  -- commit (added commits to MR src branch)
+  -- pencil-square (edit to MR description)
+  -- approval
+  -- git-merge (enabled automatic merge after pipeline completes)
+  -- fork (change target branch)
+  -- and more ....
+  for _, discussion in ipairs(node.discussions.nodes) do
+    for idx, note in ipairs(discussion) do
+      if note.system then
+
+      elseif idx == 1 then -- first one goes as a comment
+        M.write_mr_comment(bufnr, note, discussion, kind)
+      else -- rest as thread
+        M.write_mr_thread(bufnr, note, discussion, kind)
+      end
+      prev_is_system = note.system
+    end
+  end
+  -- CURRENT WIP
+  M.write_mr_comment = function(bufnr, note, discussion, kind, prev_is_system)
+      if prev_is_system then
+        M.write_block(bufnr, {""})
+      end
+
+      -- write the comment
+      local start_line, end_line = M.write_comment(bufnr, item, "IssueComment")
+      folds.create(bufnr, start_line+1, end_line, true)
+      prev_is_event = false
+
+  end
+
+
+    elseif item.__typename == "PullRequestReview" then
+      if prev_is_event then
+        M.write_block(bufnr, {""})
+      end
+
+      -- A review can have 0+ threads
+      local threads = {}
+      for _, comment in ipairs(item.comments.nodes) do
+        for _, reviewThread in ipairs(node.reviewThreads.nodes) do
+          if comment.id == reviewThread.comments.nodes[1].id then
+            -- found a thread for the current review
+            table.insert(threads, reviewThread)
+          end
+        end
+      end
+
+      -- skip reviews with no threads and empty body
+      if #threads == 0 and utils.is_blank(item.body) then
+        goto continue
+      end
+
+      -- print review header and top level comment
+      local review_start, review_end = M.write_comment(bufnr, item, "PullRequestReview")
+
+      -- print threads
+      if #threads > 0 then
+        review_end = M.write_threads(bufnr, threads, review_start, review_end)
+        folds.create(bufnr, review_start+1, review_end, true)
+      end
+      M.write_block(bufnr, {""})
+      prev_is_event = false
+    elseif item.__typename == "AssignedEvent" then
+      M.write_assigned_event(bufnr, item, prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "PullRequestCommit" then
+      M.write_commit_event(bufnr, item, prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "MergedEvent" then
+      M.write_merged_event(bufnr, item, prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "ClosedEvent" then
+      M.write_closed_event(bufnr, item, prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "ReopenedEvent" then
+      M.write_reopened_event(bufnr, item, prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "ReviewRequestedEvent" then
+      M.write_review_requested_event(bufnr, item, "removed", prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "ReviewRequestRemovedEvent" then
+      M.write_review_request_removed_event(bufnr, item, "removed", prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "ReviewDismissedEvent" then
+      M.write_review_dismissed_event(bufnr, item, "removed", prev_is_event)
+      prev_is_event = true
+    end
+    ::continue::
+  end
+  if prev_is_system then
+    M.write_block(bufnr, {""})
+  end
+
 end
 
 return M
