@@ -323,9 +323,9 @@ function M.pull_requests(opts)
                 action_set.select:replace(function(prompt_bufnr, type)
                   open(opts.repo, "pull_request", type)(prompt_bufnr)
                 end)
-                map("i", "<c-o>", checkout_pull_request())
-                map("i", "<c-b>", open_in_browser("pr", opts.repo))
-                map("i", "<c-y>", copy_url("pull_request"))
+                --map("i", "<c-o>", checkout_pull_request())
+                --map("i", "<c-b>", open_in_browser("pr", opts.repo))
+                --map("i", "<c-y>", copy_url("pull_request"))
                 return true
               end
             }
