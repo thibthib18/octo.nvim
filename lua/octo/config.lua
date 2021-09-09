@@ -13,6 +13,7 @@ M.defaults = {
   left_bubble_delimiter = "";
   provider = "gitlab" or "github";
   provider_hostname = "";
+  username = "test_user";
   snippet_context_lines = 4;
   file_panel = {
     size = 10,
